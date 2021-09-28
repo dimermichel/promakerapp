@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "promakerapp",
+    "slug": "promakerapp",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  },
+  "name": "promakerapp"
+}
