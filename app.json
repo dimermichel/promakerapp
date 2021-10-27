@@ -2,6 +2,7 @@
   "expo": {
     "name": "promakerapp",
     "slug": "promakerapp",
+    "scheme": "promakerapp",
     "version": "1.0.0",
     "assetBundlePatterns": [
       "**/*"
