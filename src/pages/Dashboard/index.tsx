@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { ActivityIndicator, StyleSheet, Keyboard } from 'react-native';
+import * as Yup from 'yup';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTheme } from 'styled-components/native';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
-import { HighlightCard } from '../../components/HighlightCard';
-import {
-  TransactionCard,
-  TransactionCardProps,
-} from '../../components/TransactionCard';
+import { useNavigation } from '@react-navigation/core';
+import { FAB } from 'react-native-paper';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useForm } from 'react-hook-form';
+import ScriptCard from '../../components/ScriptCard';
 import {
   Container,
   Header,
@@ -20,145 +20,93 @@ import {
   UserName,
   Icon,
   HighlightCards,
-  Transactions,
+  Scripts,
   Title,
-  TransactionList,
+  ScriptList,
   LogoutButton,
   LoadContainer,
+  Form,
+  Fields,
+  SearchButtonIcon,
+  SearchButton,
 } from './styles';
-
 import { useAuth } from '../../hooks/auth';
+import theme from '../../global/styles/theme';
+import { InputForm } from '../../components/Form/InputForm';
 
-export interface DataListProps extends TransactionCardProps {
+export interface DataListProps {
   id: string;
+  title: string;
+  text: string;
+  date: string;
 }
 
-interface HighlightProps {
-  amount: string;
-  lastTransaction: string;
+interface FormData {
+  search: string;
 }
 
-interface HighlightData {
-  entries: HighlightProps;
-  expenses: HighlightProps;
-  total: HighlightProps;
-}
+const schema = Yup.object().shape({
+  search: Yup.string(),
+});
 
 export function Dashboard() {
-  const theme = useTheme();
+  const navigation = useNavigation();
   const { user, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [transactions, setTransactions] = useState<DataListProps[]>([]);
-  const [highlightData, setHighlightData] = useState<HighlightData>({
-    entries: {
-      amount: '0',
-      lastTransaction: '',
-    },
-    expenses: {
-      amount: '0',
-      lastTransaction: '',
-    },
-    total: {
-      amount: '0',
-      lastTransaction: '',
-    },
-  } as HighlightData);
+  const [speeches, setSpeeches] = useState<DataListProps[]>([]);
+  const [savedSpeeches, setSavedSpeeches] = useState<DataListProps[]>([]);
 
-  const dataKey = `@promakerapp:transactions_user:${user.id}`;
+  const dataKey = `@promakerapp:script_user:${user.id}`;
 
-  function getLastTransactionDate(
-    collection: DataListProps[],
-    type: 'positive' | 'negative',
-  ): string {
-    const lastTransaction = Math.max.apply(
-      Math,
-      collection
-        .filter((transaction) => transaction.type === type)
-        ?.map((transaction) => new Date(transaction.date).getTime()),
-    );
-    console.log(lastTransaction);
-    return !isFinite(lastTransaction) && isNaN(lastTransaction)
-      ? format(new Date(lastTransaction), 'PPP')
-      : `${format(new Date(), 'PPP')}`;
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
+  });
+
+  async function handleSearch(form: FormData) {
+    const { search } = form;
+    if (search === '') {
+      setSpeeches(savedSpeeches);
+    } else {
+      const smallCapsSearch = search.toLowerCase();
+      const filterSpeeches = savedSpeeches.filter(
+        el =>
+          el.title.toLowerCase().includes(smallCapsSearch) ||
+          el.text.toLowerCase().includes(smallCapsSearch),
+      );
+      setSpeeches(filterSpeeches);
+    }
+    Keyboard.dismiss();
   }
 
-  async function loadTransactions() {
-    let incomeSum = 0;
-    let outcomeSum = 0;
+  async function loadSpeeches() {
     const response = await AsyncStorage.getItem(dataKey);
-    const transactions = response ? JSON.parse(response) : [];
-    const transactionsFormatted: DataListProps[] = transactions.map(
-      (transaction: DataListProps) => {
-        if (transaction.type === 'positive') {
-          incomeSum += Number(transaction.amount);
-        } else {
-          outcomeSum += Number(transaction.amount);
-        }
-
-        const amount = new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(Number(transaction.amount));
-
-        const date = format(new Date(transaction.date), 'MM/dd/yyyy');
+    const speechesSaved = response ? JSON.parse(response) : [];
+    const speechesFormatted: DataListProps[] = speechesSaved.map(
+      (speech: DataListProps) => {
+        const date = format(new Date(speech.date), 'MM/dd/yyyy');
         return {
-          id: transaction.id,
-          name: transaction.name,
-          type: transaction.type,
-          category: transaction.category,
-          amount: `${amount}`,
+          id: speech.id,
+          title: speech.title,
+          text: speech.text,
           date,
         };
       },
     );
 
-    const total = incomeSum - outcomeSum;
-
-    const lastTransactionEntryDate = getLastTransactionDate(
-      transactions,
-      'positive',
-    );
-    const lastTransactionExpenseDate = getLastTransactionDate(
-      transactions,
-      'negative',
-    );
-    const totalInterval = `01 to ${lastTransactionExpenseDate}`;
-
-    setHighlightData({
-      entries: {
-        amount: new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(Number(incomeSum)),
-        lastTransaction: `Last entry at ${lastTransactionEntryDate}`,
-      },
-      expenses: {
-        amount: new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(Number(outcomeSum)),
-        lastTransaction: `Last expense at ${lastTransactionExpenseDate}`,
-      },
-      total: {
-        amount: new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(Number(total)),
-        lastTransaction: totalInterval,
-      },
-    });
-
-    setTransactions(transactionsFormatted);
+    console.log('speechesFormatted', speechesFormatted);
+    setSpeeches(speechesFormatted);
+    setSavedSpeeches(speechesFormatted);
     setIsLoading(false);
   }
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      loadTransactions();
+      loadSpeeches();
     }, []),
   );
 
@@ -176,7 +124,7 @@ export function Dashboard() {
                 <Photo source={{ uri: user.photo }} />
                 <User>
                   <UserGreeting>Hi,</UserGreeting>
-                  <UserName>{user.name}</UserName>
+                  <UserName>{user.name ? user.name : 'User'}</UserName>
                 </User>
               </UserInfo>
               <LogoutButton onPress={signOut}>
@@ -185,35 +133,47 @@ export function Dashboard() {
             </UserWrapper>
           </Header>
           <HighlightCards>
-            <HighlightCard
-              type="up"
-              title="Income"
-              amount={highlightData.entries.amount}
-              lastTransaction={highlightData.entries.lastTransaction}
-            />
-            <HighlightCard
-              type="down"
-              title="Outcome"
-              amount={highlightData.expenses.amount}
-              lastTransaction={highlightData.expenses.lastTransaction}
-            />
-            <HighlightCard
-              type="total"
-              title="Total"
-              amount={highlightData.total.amount}
-              lastTransaction={highlightData.total.lastTransaction}
-            />
+            <Form>
+              <Fields>
+                <InputForm
+                  name="search"
+                  control={control}
+                  placeholder="Title, script, etc..."
+                  autoCapitalize="sentences"
+                  autoCorrect={false}
+                  error={errors.search && errors.search.message}
+                />
+                <SearchButton onPress={handleSubmit(handleSearch)}>
+                  <SearchButtonIcon name="search" />
+                </SearchButton>
+              </Fields>
+            </Form>
           </HighlightCards>
-          <Transactions>
+          <Scripts>
             <Title>List</Title>
-            <TransactionList
-              data={transactions}
+            <ScriptList
+              data={speeches}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => <TransactionCard data={item} />}
+              renderItem={({ item }) => <ScriptCard data={item} />}
             />
-          </Transactions>
+          </Scripts>
         </>
       )}
+      <FAB
+        style={styles.fab}
+        icon="plus"
+        onPress={() => navigation.navigate('Speech')}
+      />
     </Container>
   );
 }
+
+const styles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    backgroundColor: theme.colors.secondary,
+    margin: 16,
+    right: 16,
+    bottom: 24,
+  },
+});

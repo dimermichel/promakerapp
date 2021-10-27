@@ -17,7 +17,8 @@ import { Camera } from 'expo-camera';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Container, TeleprompterText } from './styles';
 
-export function CameraRecord() {
+export function CameraRecord({ route }) {
+  const [scriptText, setScriptText] = useState('');
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasMicrophonePermission, setHasMicrophonePermission] = useState(null);
   const [cameraRatio, setCameraRatio] = useState('16:9');
@@ -30,6 +31,7 @@ export function CameraRecord() {
 
   const scrollViewRef = useRef(null);
   const { ScrollViewManager } = NativeModules;
+
   useEffect(() => {
     (async () => {
       const { status: statusCamera } = await Camera.requestPermissionsAsync();
@@ -48,6 +50,13 @@ export function CameraRecord() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (route.params) {
+      const { text } = route.params;
+      setScriptText(text);
+    }
+  }, [route]);
 
   if (hasCameraPermission === null && hasMicrophonePermission === null) {
     return <View />;
@@ -156,10 +165,7 @@ export function CameraRecord() {
               elevation: Platform.OS === 'android' ? 9999 : 0,
             }}
           >
-            O amor é paciente, o amor é bondoso. Não inveja, não se vangloria,
-            não se orgulha. Não maltrata, não procura seus interesses, não se
-            ira facilmente, não guarda rancor. O amor é paciente, o amor é
-            bondoso.
+            {scriptText}
           </TeleprompterText>
         </ScrollView>
       </Container>

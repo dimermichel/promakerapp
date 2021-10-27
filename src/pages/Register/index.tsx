@@ -6,9 +6,7 @@ import { useForm } from 'react-hook-form';
 import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import {
- Container, Header, Title, Form, Fields 
-} from './styles';
+import { Container, Header, Title, Form, Fields } from './styles';
 import { InputForm } from '../../components/Form/InputForm';
 import { Button } from '../../components/Form/Button';
 import { useAuth } from '../../hooks/auth';
@@ -28,7 +26,7 @@ export function Register() {
 
   const navigation = useNavigation();
 
-  const dataKey = `@promakerapp:transactions_user:${user.id}`;
+  const dataKey = `@promakerapp:script_user:${user.id}`;
 
   const {
     control,
