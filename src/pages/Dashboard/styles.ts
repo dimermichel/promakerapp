@@ -1,5 +1,5 @@
 import styled from 'styled-components/native';
-import { FlatList } from 'react-native';
+import { FlatList, TextInput } from 'react-native';
 import { BorderlessButton, RectButton } from 'react-native-gesture-handler';
 import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
 import { Feather } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ export const Container = styled.View`
 
 export const Header = styled.View`
   width: 100%;
-  height: ${RFPercentage(42)}px;
+  height: ${RFPercentage(35)}px;
   background-color: ${({ theme }) => theme.colors.primary};
 
   justify-content: center;
@@ -67,10 +67,10 @@ export const Icon = styled(Feather)`
   font-size: ${RFValue(24)}px;
 `;
 
-export const HighlightCards = styled.View`
+export const SearchContainer = styled.View`
   width: 100%;
   position: absolute;
-  margin-top: ${RFPercentage(20)}px;
+  margin-top: ${RFPercentage(18)}px;
 `;
 
 export const Scripts = styled.View`
@@ -96,6 +96,17 @@ export const SearchButton = styled(RectButton)``;
 export const SearchButtonIcon = styled(Feather)`
   color: ${({ theme }) => theme.colors.secondary};
   font-size: ${RFValue(24)}px;
+`;
+
+export const SearchInput = styled(TextInput)`
+  width: 100%;
+  padding: 18px;
+
+  font-family: ${({ theme }) => theme.fonts.regular};
+  font-size: ${RFValue(14)}px;
+  color: ${({ theme }) => theme.colors.text_dark};
+
+  border-radius: 5px;
 `;
 
 export const Title = styled.Text`

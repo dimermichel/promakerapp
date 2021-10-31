@@ -31,12 +31,12 @@ export default function ScriptCard({ data }: Props) {
       </Text>
 
       <Footer>
-        <IconContainer>
-          <Date>{data.date}</Date>
-        </IconContainer>
         <IconButton onPress={() => navigation.navigate('CameraRecord', data)}>
           <Icon name="play" />
         </IconButton>
+        <IconContainer>
+          <Date>{data.date}</Date>
+        </IconContainer>
       </Footer>
     </Container>
   );

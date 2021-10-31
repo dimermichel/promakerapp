@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { Container, Header, Title, Form, Fields } from './styles';
+import { Container, Header, Title, Form, Fields, Icon } from './styles';
 import { InputForm } from '../../components/Form/InputForm';
 import { Button } from '../../components/Form/Button';
 import { useAuth } from '../../hooks/auth';
@@ -17,8 +17,8 @@ interface FormData {
 }
 
 const schema = Yup.object().shape({
-  title: Yup.string().required('Inform a Name'),
-  text: Yup.string().required('Inform a Text'),
+  title: Yup.string().required('Inform a Title'),
+  text: Yup.string().required('Inform a Script'),
 });
 
 export function Register() {
@@ -36,8 +36,9 @@ export function Register() {
   } = useForm({
     resolver: yupResolver(schema),
   });
+
   async function handleRegister(form: FormData) {
-    const newTransaction = {
+    const newScript = {
       id: `${uuid.v4()}`,
       title: form.title,
       text: form.text,
@@ -47,7 +48,7 @@ export function Register() {
     try {
       const data = await AsyncStorage.getItem(dataKey);
       const currentData = data ? JSON.parse(data) : [];
-      const dataFormatted = [...currentData, newTransaction];
+      const dataFormatted = [...currentData, newScript];
 
       await AsyncStorage.setItem(dataKey, JSON.stringify(dataFormatted));
 
@@ -58,6 +59,10 @@ export function Register() {
       console.log(error, 'error');
       Alert.alert('Error', 'An error occurred while registering');
     }
+  }
+
+  function handleGoBack() {
+    navigation.goBack();
   }
 
   useEffect(() => {
@@ -76,7 +81,13 @@ export function Register() {
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <Container>
         <Header>
-          <Title>Create Speech</Title>
+          <Icon
+            name="arrow-left"
+            size={24}
+            color="#fff"
+            onPress={handleGoBack}
+          />
+          <Title>Create Script</Title>
         </Header>
 
         <Form>
@@ -93,14 +104,14 @@ export function Register() {
             <InputForm
               name="text"
               control={control}
-              placeholder="Hi this is a new text..."
+              placeholder="Hi this is a new script..."
               multiline
               style={{ height: 400 }}
               error={errors.amount && errors.amount.message}
             />
           </Fields>
           <Button
-            title="Send"
+            title="Save"
             onPress={handleSubmit(handleRegister)}
             style={{ marginTop: 16 }}
           />
