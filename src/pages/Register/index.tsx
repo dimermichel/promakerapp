@@ -1,12 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
 import * as Yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
-import { Container, Header, Title, Form, Fields, Icon } from './styles';
+import {
+ Container, Header, Title, Form, Fields, Icon 
+} from './styles';
 import { InputForm } from '../../components/Form/InputForm';
 import { Button } from '../../components/Form/Button';
 import { useAuth } from '../../hooks/auth';
@@ -21,15 +22,15 @@ const schema = Yup.object().shape({
   text: Yup.string().required('Inform a Script'),
 });
 
-export function Register() {
+export function Register({ route, navigation }) {
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-
-  const navigation = useNavigation();
-
+  const scriptId = route.params;
   const dataKey = `@promakerapp:script_user:${user.id}`;
 
   const {
     control,
+    setValue,
     handleSubmit,
     reset,
     formState: { errors },
@@ -39,19 +40,26 @@ export function Register() {
 
   async function handleRegister(form: FormData) {
     const newScript = {
-      id: `${uuid.v4()}`,
+      id: scriptId || `${uuid.v4()}`,
       title: form.title,
       text: form.text,
       date: new Date(),
     };
 
     try {
+      setLoading(true);
       const data = await AsyncStorage.getItem(dataKey);
       const currentData = data ? JSON.parse(data) : [];
-      const dataFormatted = [...currentData, newScript];
-
-      await AsyncStorage.setItem(dataKey, JSON.stringify(dataFormatted));
-
+      if (scriptId) {
+        const filteredData = currentData.filter(
+          script => script.id !== scriptId,
+        );
+        const dataFormatted = [...filteredData, newScript];
+        await AsyncStorage.setItem(dataKey, JSON.stringify(dataFormatted));
+      } else {
+        const dataFormatted = [...currentData, newScript];
+        await AsyncStorage.setItem(dataKey, JSON.stringify(dataFormatted));
+      }
       reset();
 
       navigation.navigate('Dashboard');
@@ -67,15 +75,28 @@ export function Register() {
 
   useEffect(() => {
     async function loadData() {
-      const data = await AsyncStorage.getItem(dataKey);
-      data && console.log(JSON.parse(data));
+      try {
+        setLoading(true);
+        const data = await AsyncStorage.getItem(dataKey);
+        const currentData = data ? JSON.parse(data) : [];
+        const filteredData = currentData.filter(
+          script => script.id === scriptId,
+        );
+        if (filteredData.length > 0) {
+          setValue('title', filteredData[0].title);
+          setValue('text', filteredData[0].text);
+        }
+        data && console.log(JSON.parse(data));
+      } catch (error) {
+        console.log(error, 'error');
+      } finally {
+        setLoading(false);
+      }
     }
-    loadData();
-    // async function removeAll () {
-    //     await AsyncStorage.removeItem(dataKey);
-    // }
-    // removeAll();
-  }, []);
+    if (scriptId) {
+      loadData();
+    }
+  }, [dataKey, scriptId]);
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
@@ -87,7 +108,7 @@ export function Register() {
             color="#fff"
             onPress={handleGoBack}
           />
-          <Title>Create Script</Title>
+          <Title>{scriptId ? 'Edit Script' : 'Create Script'}</Title>
         </Header>
 
         <Form>
@@ -111,6 +132,7 @@ export function Register() {
             />
           </Fields>
           <Button
+            enabled={!loading}
             title="Save"
             onPress={handleSubmit(handleRegister)}
             style={{ marginTop: 16 }}

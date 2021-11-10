@@ -34,6 +34,7 @@ import {
   SearchButtonIcon,
   SearchButton,
   SearchInput,
+  ListTitle,
 } from './styles';
 import { useAuth } from '../../hooks/auth';
 import theme from '../../global/styles/theme';
@@ -185,7 +186,7 @@ export function Dashboard() {
             </SearchContainer>
           </TouchableWithoutFeedback>
           <Scripts>
-            <Title>List</Title>
+            <ListTitle>List</ListTitle>
             <ScriptList
               data={speeches}
               keyExtractor={(item) => item.id}

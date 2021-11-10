@@ -76,7 +76,6 @@ export const SearchContainer = styled.View`
 export const Scripts = styled.View`
   flex: 1;
   padding: 0 24px;
-
   margin-top: ${RFPercentage(2)}px;
 `;
 
@@ -117,6 +116,14 @@ export const Title = styled.Text`
   margin-bottom: ${RFValue(16)}px;
 `;
 
+export const ListTitle = styled.Text`
+  color: ${({ theme }) => theme.colors.text_dark};
+  font-family: ${({ theme }) => theme.fonts.regular};
+  font-size: ${RFValue(20)}px;
+
+  margin-bottom: ${RFValue(16)}px;
+`;
+
 export const ScriptList = styled(
   FlatList as new () => FlatList<DataListProps>,
 ).attrs({
@@ -124,7 +131,10 @@ export const ScriptList = styled(
   contentContainerStyle: {
     paddingBottom: getBottomSpace(),
   },
-})``;
+})`
+  margin: 0;
+  padding: 0;
+`;
 
 export const LoadContainer = styled.View`
   flex: 1;
