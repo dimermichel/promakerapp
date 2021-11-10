@@ -1,6 +1,7 @@
 import React from 'react';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { StatusBar } from 'expo-status-bar';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import AppLoading from 'expo-app-loading';
 import { ThemeProvider } from 'styled-components';
@@ -38,7 +39,9 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <StatusBar style="light" />
       <AuthProvider>
-        <Routes />
+        <BottomSheetModalProvider>
+          <Routes />
+        </BottomSheetModalProvider>
       </AuthProvider>
     </ThemeProvider>
   );
