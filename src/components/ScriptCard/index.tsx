@@ -20,8 +20,8 @@ import {
   BottomSheetActionsContainer,
   ActionsTextButton,
   ActionsText,
-  SurroundingButton,
   ContainerButton,
+  IconButtonText,
 } from './styles';
 import { useAuth } from '../../hooks/auth';
 
@@ -64,18 +64,16 @@ export default function ScriptCard({ data }: Props) {
     ),
     [backdropPressBehavior],
   );
+
   const handleDelete = useCallback(async () => {
     const { id } = data;
 
     if (id) {
       try {
-        // TODO Delete Script
         const response = await AsyncStorage.getItem(dataKey);
-        const speechesSaved = response ? JSON.parse(response) : [];
-        const newSpeechesSaved = speechesSaved.filter(
-          (speech) => speech.id !== id,
-        );
-        await AsyncStorage.setItem(dataKey, JSON.stringify(newSpeechesSaved));
+        const scriptsSaved = response ? JSON.parse(response) : [];
+        const newScriptsSaved = scriptsSaved.filter(script => script.id !== id);
+        await AsyncStorage.setItem(dataKey, JSON.stringify(newScriptsSaved));
         setIsScriptDeleted(true);
         bottomSheetActionsModalRef.current?.close();
       } catch (err) {
@@ -83,6 +81,7 @@ export default function ScriptCard({ data }: Props) {
       }
     }
   }, [data.id]);
+
   const handleEdit = () => {
     bottomSheetActionsModalRef.current?.close();
     navigation.push('Speech', data.id);
@@ -104,7 +103,11 @@ export default function ScriptCard({ data }: Props) {
         {!isScriptDeleted ? (
           <ContainerButton onPress={handlePresentModalPress}>
             <Title>{data.title}</Title>
-            <Text ellipsizeMode="tail" numberOfLines={3} style={{ width: 100 }}>
+            <Text
+              ellipsizeMode="tail"
+              numberOfLines={3}
+              style={{ width: '100%' }}
+            >
               {data.text}
             </Text>
 
@@ -112,7 +115,8 @@ export default function ScriptCard({ data }: Props) {
               <IconButton
                 onPress={() => navigation.navigate('CameraRecord', data)}
               >
-                <Icon name="play" />
+                <IconButtonText> Record </IconButtonText>
+                <Icon name="video" />
               </IconButton>
               {/* <IconButton onPress={handlePresentModalPress}>
                 <Icon name="more-vertical" />

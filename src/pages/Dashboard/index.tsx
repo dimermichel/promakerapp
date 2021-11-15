@@ -1,7 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import {
- ActivityIndicator, StyleSheet, Keyboard, View 
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Keyboard, View } from 'react-native';
 import * as Yup from 'yup';
 import { Controller } from 'react-hook-form';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -66,10 +64,13 @@ export function Dashboard() {
   const {
     control,
     handleSubmit,
-    reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
+    defaultValues: {
+      search: '',
+    },
   });
 
   async function handleSearch(form: FormData) {
@@ -79,11 +80,18 @@ export function Dashboard() {
     } else {
       const smallCapsSearch = search.toLowerCase();
       const filterSpeeches = savedSpeeches.filter(
-        (el) => el.title.toLowerCase().includes(smallCapsSearch)
-          || el.text.toLowerCase().includes(smallCapsSearch),
+        el =>
+          el.title.toLowerCase().includes(smallCapsSearch) ||
+          el.text.toLowerCase().includes(smallCapsSearch),
       );
       setSpeeches(filterSpeeches);
     }
+    Keyboard.dismiss();
+  }
+
+  async function handleClear() {
+    setValue('search', '');
+    setSpeeches(savedSpeeches);
     Keyboard.dismiss();
   }
 
@@ -168,14 +176,23 @@ export function Dashboard() {
                               onChangeText={onChange}
                               value={value}
                               placeholder="Title, script, etc..."
+                              returnKeyType="search"
                               style={{ backgroundColor: 'transparent' }}
                               onSubmitEditing={handleSubmit(handleSearch)}
                             />
                           </View>
                           <View style={{ flex: 1 }}>
-                            <SearchButton onPress={handleSubmit(handleSearch)}>
-                              <SearchButtonIcon name="search" />
-                            </SearchButton>
+                            {String(value).length > 0 && value !== undefined ? (
+                              <SearchButton onPress={handleSubmit(handleClear)}>
+                                <SearchButtonIcon name="x" />
+                              </SearchButton>
+                            ) : (
+                              <SearchButton
+                                onPress={handleSubmit(handleSearch)}
+                              >
+                                <SearchButtonIcon name="search" />
+                              </SearchButton>
+                            )}
                           </View>
                         </View>
                       )}
@@ -189,7 +206,7 @@ export function Dashboard() {
             <ListTitle>List</ListTitle>
             <ScriptList
               data={speeches}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               renderItem={({ item }) => <ScriptCard data={item} />}
               ListEmptyComponent={() => (
                 <>

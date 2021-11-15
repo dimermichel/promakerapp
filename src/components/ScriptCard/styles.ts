@@ -43,12 +43,26 @@ export const IconContainer = styled.View`
 
 export const Icon = styled(Feather)`
   font-size: ${RFValue(20)}px;
-  color: ${({ theme }) => theme.colors.secondary_light};
+  color: ${({ theme }) => theme.colors.secondary};
 `;
 
 export const IconButton = styled(RectButton)`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 20px;
   font-size: ${RFValue(20)}px;
-  color: ${({ theme }) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.shape};
+  width: 136px;
+  background-color: ${({ theme }) => theme.colors.secondary_light}; ;
+`;
+
+export const IconButtonText = styled.Text`
+  font-family: ${({ theme }) => theme.fonts.regular};
+  font-size: ${RFValue(20)}px;
+  color: ${({ theme }) => theme.colors.shape};
 `;
 
 export const SurroundingButton = styled(RectButton)`

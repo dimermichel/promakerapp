@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ReactNative, {
+import {
   Text,
   View,
   TouchableOpacity,
   Platform,
   NativeModules,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  SafeAreaView,
 } from 'react-native';
 
 import * as Sharing from 'expo-sharing';
@@ -14,8 +17,27 @@ import {
 } from 'react-native-iphone-x-helper';
 import { Ionicons } from '@expo/vector-icons';
 import { Camera } from 'expo-camera';
-import { ScrollView } from 'react-native-gesture-handler';
+import {
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+  ScrollView,
+} from 'react-native-gesture-handler';
+import Animated, {
+  scrollTo,
+  useAnimatedRef,
+  useAnimatedStyle,
+  withTiming,
+  useDerivedValue,
+  useSharedValue,
+  cancelAnimation,
+  useAnimatedGestureHandler,
+} from 'react-native-reanimated';
+import { number } from 'yup';
 import { Container, TeleprompterText } from './styles';
+
+type ContextType = {
+  startY: number;
+};
 
 export function CameraRecord({ route }) {
   const [scriptText, setScriptText] = useState('');
@@ -25,19 +47,48 @@ export function CameraRecord({ route }) {
   const [cameraRef, setCameraRef] = useState<Camera | null>(null);
   const [recording, setRecording] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
   const [currentY, setCurrentY] = useState(0);
-  const [totalHeight, setTotalHeight] = useState(0);
-  const [type, setType] = useState(Camera.Constants.Type.back);
+  const [scrollSpeed, setScrollSpeed] = useState(40);
+  const [totalHeight, setTotalHeight] = useState(20);
+  const [type, setType] = useState(Camera.Constants.Type.front);
 
   const scrollViewRef = useRef(null);
   const { ScrollViewManager } = NativeModules;
+
+  const aref = useAnimatedRef();
+  const newScroll = useSharedValue(50);
+  const newDuration = useSharedValue(0);
+  const pressed = useSharedValue(false);
+  useDerivedValue(() => {
+    scrollTo(aref, 0, newScroll.value * 20, true);
+  });
+
+  const eventHandler = useAnimatedGestureHandler<
+    PanGestureHandlerGestureEvent,
+    ContextType
+  >({
+    onStart: (event, ctx) => {
+      pressed.value = true;
+      cancelAnimation(newScroll);
+      ctx.startY = newScroll.value;
+    },
+    onActive: (event, ctx) => {
+      newScroll.value = ctx.startY + event.translationY;
+      console.log(newScroll.value);
+    },
+    onEnd: (event, ctx) => {
+      pressed.value = false;
+      cancelAnimation(newScroll);
+      // newScroll.value = event.translationY;
+    },
+  });
 
   useEffect(() => {
     (async () => {
       const { status: statusCamera } = await Camera.requestPermissionsAsync();
       if (statusCamera) setHasCameraPermission(statusCamera === 'granted');
-      const { status: statusMicrophone } =
-        await Camera.requestMicrophonePermissionsAsync();
+      const { status: statusMicrophone } =        await Camera.requestMicrophonePermissionsAsync();
       if (statusMicrophone) {
         setHasMicrophonePermission(statusMicrophone === 'granted');
       }
@@ -57,6 +108,41 @@ export function CameraRecord({ route }) {
       setScriptText(text);
     }
   }, [route]);
+
+  let scrollOffset = 0;
+
+  const scroll = () => {
+    // aref.current?.scrollTo({
+    //   x: 0,
+    //   y: scrollOffset + scrollSpeed,
+    //   animated: true,
+    // });
+    // newScroll.value += scrollOffset + scrollSpeed;
+  };
+
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: withTiming(newScroll.value, {
+          duration: newDuration.value,
+        }),
+      },
+    ],
+  }));
+
+  useEffect(() => {
+    if (isScrolling) {
+      const interval = setInterval(() => {
+        // scroll();
+        newScroll.value = scrollOffset + scrollSpeed;
+      }, 1000 / 60);
+      return () => clearInterval(interval);
+    }
+  }, [isScrolling]);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollOffset = event.nativeEvent.contentOffset.y;
+  };
 
   if (hasCameraPermission === null && hasMicrophonePermission === null) {
     return <View />;
@@ -79,7 +165,11 @@ export function CameraRecord({ route }) {
         console.log('width', width);
         width++;
         if (scrollViewRef !== null) {
-          scrollViewRef.current.scrollTo({ x: 0, y: width, animated: true });
+          scrollViewRef.current?.scrollTo({
+            x: 0,
+            y: width + scrollSpeed,
+            animated: true,
+          });
         }
       }
     }
@@ -102,8 +192,19 @@ export function CameraRecord({ route }) {
       // }
       // timedCount();
     } else {
-      move();
+      // move();
+      // setIsScrolling(!isScrolling);
     }
+    newDuration.value = (scriptText.length / 15) * 1000;
+    newScroll.value = 0;
+    if (newScroll.value !== -totalHeight) newScroll.value = -totalHeight;
+    console.log('newScroll.value', newScroll.value);
+    console.log('newDuration', newDuration.value);
+  };
+
+  const onLayout = event => {
+    const { height } = event.nativeEvent.layout;
+    setTotalHeight(height);
   };
 
   return (
@@ -122,13 +223,12 @@ export function CameraRecord({ route }) {
           flexDirection: 'column',
         }}
       >
-        <ScrollView
-          ref={scrollViewRef}
+        {/* <ScrollView
+          ref={aref}
           onLayout={event => {
             event.nativeEvent.layout.height;
             console.log('layoutHeight', event.nativeEvent.layout.height);
             console.log(scrollViewRef.current.contentOffset);
-
             if (ScrollViewManager && ScrollViewManager.getContentSize) {
               ScrollViewManager.getContentSize(
                 ReactNative.findNodeHandle(scrollViewRef.current),
@@ -139,10 +239,7 @@ export function CameraRecord({ route }) {
               );
             }
           }}
-          onScroll={e => {
-            setCurrentY(e.nativeEvent.contentOffset.y);
-            console.log('onScroll', e.nativeEvent.contentOffset.y);
-          }}
+          onScroll={handleScroll}
           onScrollBeginDrag={() => {
             setIsDragging(true);
             console.log('isDragging onScrollBeginDrag', isDragging);
@@ -159,6 +256,8 @@ export function CameraRecord({ route }) {
             flexDirection: 'column',
           }}
           scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
         >
           <TeleprompterText
             style={{
@@ -167,7 +266,18 @@ export function CameraRecord({ route }) {
           >
             {scriptText}
           </TeleprompterText>
-        </ScrollView>
+        </ScrollView> */}
+        <PanGestureHandler onGestureEvent={eventHandler}>
+          <Animated.View style={[style]} onLayout={onLayout}>
+            <TeleprompterText
+              style={{
+                elevation: Platform.OS === 'android' ? 999 : 0,
+              }}
+            >
+              {scriptText}
+            </TeleprompterText>
+          </Animated.View>
+        </PanGestureHandler>
       </Container>
       <Camera
         style={{ flex: 1, position: 'relative', aspectRatio: 0.5625 }}
@@ -185,8 +295,9 @@ export function CameraRecord({ route }) {
           bottom: getBottomSpace(),
           height: Platform.OS === 'ios' ? getBottomSpace() + 80 : 80,
           justifyContent: 'center',
-          backgroundColor: 'rgba(57, 57, 57, 0.247)',
+          backgroundColor: 'rgba(31, 31, 31, 0.879)',
           borderRadius: 10,
+          elevation: 9999,
           paddingBottom: getBottomSpace(),
           zIndex: 99999,
         }}
@@ -226,6 +337,19 @@ export function CameraRecord({ route }) {
             </TouchableOpacity>
             <TouchableOpacity
               style={{ alignSelf: 'center' }}
+              onPress={() => {
+                newDuration.value -= 200;
+                if (newDuration.value < 0) newDuration.value = 0;
+                console.log('newDuration', newDuration.value);
+              }}
+            >
+              <Ionicons name="alert" size={40} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                alignSelf: 'center',
+                backgroundColor: isScrolling ? '#00ff00' : '#ff0000',
+              }}
               onPress={handleButtonPress}
             >
               <View

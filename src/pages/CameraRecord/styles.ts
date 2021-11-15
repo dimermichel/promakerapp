@@ -1,6 +1,7 @@
 import styled from 'styled-components/native';
 import { RectButton } from 'react-native-gesture-handler';
-import { RFPercentage } from 'react-native-responsive-fontsize';
+import { RFPercentage, RFValue } from 'react-native-responsive-fontsize';
+import { getStatusBarHeight } from 'react-native-iphone-x-helper';
 
 export const Container = styled.View`
   flex: 1;
@@ -20,7 +21,12 @@ export const Button = styled(RectButton)`
 export const TeleprompterText = styled.Text`
   width: ${RFPercentage(45)}px;
   height: auto;
-  font-size: 40px;
-  font-weight: bold;
-  color: rgba(0, 0, 100, 1);
+  width: 100%;
+  padding: 0 5px;
+  padding-top: ${getStatusBarHeight()}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
+  font-size: ${RFValue(52)}px;
+  line-height: ${RFValue(65)}px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.2);
 `;
