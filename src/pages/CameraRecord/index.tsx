@@ -4,91 +4,59 @@ import {
   View,
   TouchableOpacity,
   Platform,
-  NativeModules,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  SafeAreaView,
 } from 'react-native';
-
+import { useTheme } from 'styled-components';
+import Slider from '@react-native-community/slider';
 import * as Sharing from 'expo-sharing';
 import {
   getBottomSpace,
   getStatusBarHeight,
 } from 'react-native-iphone-x-helper';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons'; 
 import { Camera } from 'expo-camera';
 import {
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
   ScrollView,
 } from 'react-native-gesture-handler';
-import Animated, {
-  scrollTo,
-  useAnimatedRef,
-  useAnimatedStyle,
-  withTiming,
-  useDerivedValue,
+import {
   useSharedValue,
   cancelAnimation,
-  useAnimatedGestureHandler,
 } from 'react-native-reanimated';
-import { number } from 'yup';
-import { Container, TeleprompterText } from './styles';
+import { Container, TeleprompterText, ButtonsContainer, SliderContainer, ActionsContainer } from './styles';
 
 type ContextType = {
   startY: number;
 };
 
+export const clamp = (value: number, lowerBound: number, upperBound: number) => {
+  'worklet'
+  return Math.min(Math.max(lowerBound, value), upperBound);
+}
+
 export function CameraRecord({ route }) {
+  const scrollOffset = useSharedValue(0);
+  const scrollSpeed = useSharedValue(2)
+  const theme = useTheme();
   const [scriptText, setScriptText] = useState('');
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasMicrophonePermission, setHasMicrophonePermission] = useState(null);
   const [cameraRatio, setCameraRatio] = useState('16:9');
   const [cameraRef, setCameraRef] = useState<Camera | null>(null);
   const [recording, setRecording] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [currentY, setCurrentY] = useState(0);
-  const [scrollSpeed, setScrollSpeed] = useState(40);
-  const [totalHeight, setTotalHeight] = useState(20);
+  const [totalHeight, setTotalHeight] = useState(null);
   const [type, setType] = useState(Camera.Constants.Type.front);
 
-  const scrollViewRef = useRef(null);
-  const { ScrollViewManager } = NativeModules;
-
-  const aref = useAnimatedRef();
-  const newScroll = useSharedValue(50);
-  const newDuration = useSharedValue(0);
-  const pressed = useSharedValue(false);
-  useDerivedValue(() => {
-    scrollTo(aref, 0, newScroll.value * 20, true);
-  });
-
-  const eventHandler = useAnimatedGestureHandler<
-    PanGestureHandlerGestureEvent,
-    ContextType
-  >({
-    onStart: (event, ctx) => {
-      pressed.value = true;
-      cancelAnimation(newScroll);
-      ctx.startY = newScroll.value;
-    },
-    onActive: (event, ctx) => {
-      newScroll.value = ctx.startY + event.translationY;
-      console.log(newScroll.value);
-    },
-    onEnd: (event, ctx) => {
-      pressed.value = false;
-      cancelAnimation(newScroll);
-      // newScroll.value = event.translationY;
-    },
-  });
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     (async () => {
       const { status: statusCamera } = await Camera.requestPermissionsAsync();
       if (statusCamera) setHasCameraPermission(statusCamera === 'granted');
-      const { status: statusMicrophone } =        await Camera.requestMicrophonePermissionsAsync();
+      const { status: statusMicrophone } = await Camera.requestMicrophonePermissionsAsync();
       if (statusMicrophone) {
         setHasMicrophonePermission(statusMicrophone === 'granted');
       }
@@ -109,39 +77,30 @@ export function CameraRecord({ route }) {
     }
   }, [route]);
 
-  let scrollOffset = 0;
-
   const scroll = () => {
-    // aref.current?.scrollTo({
-    //   x: 0,
-    //   y: scrollOffset + scrollSpeed,
-    //   animated: true,
-    // });
-    // newScroll.value += scrollOffset + scrollSpeed;
+    scrollViewRef.current?.scrollTo({
+      x: 0,
+      y: scrollOffset.value + scrollSpeed.value,
+      animated: true,
+    });
   };
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: withTiming(newScroll.value, {
-          duration: newDuration.value,
-        }),
-      },
-    ],
-  }));
 
   useEffect(() => {
     if (isScrolling) {
       const interval = setInterval(() => {
-        // scroll();
-        newScroll.value = scrollOffset + scrollSpeed;
-      }, 1000 / 60);
+        scroll();
+      }, 16);
       return () => clearInterval(interval);
     }
   }, [isScrolling]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    scrollOffset = event.nativeEvent.contentOffset.y;
+    scrollOffset.value = event.nativeEvent.contentOffset.y;
+    if (totalHeight && scrollOffset.value >= totalHeight) {
+      setIsButtonPressed(false);
+      setIsScrolling(false);
+    };
+    console.log('scrollOffset', scrollOffset.value);
   };
 
   if (hasCameraPermission === null && hasMicrophonePermission === null) {
@@ -152,59 +111,15 @@ export function CameraRecord({ route }) {
     return <Text>No access to recording</Text>;
   }
 
-  function move() {
-    let width = currentY;
-    const id = setInterval(frame, 16);
-    function frame() {
-      if (width >= totalHeight - 300 || isDragging) {
-        // if (isDragging) {
-        clearInterval(id);
-      } else {
-        console.log('isDragging', isDragging);
-        console.log('totalHeight', totalHeight);
-        console.log('width', width);
-        width++;
-        if (scrollViewRef !== null) {
-          scrollViewRef.current?.scrollTo({
-            x: 0,
-            y: width + scrollSpeed,
-            animated: true,
-          });
-        }
-      }
-    }
-  }
-
   const handleButtonPress = () => {
-    if (Platform.OS === 'android' && scrollViewRef.current !== null) {
-      // let t;
-      // let width = currentY;
-      // function timedCount() {
-      //   scrollViewRef.current.scrollTo({
-      //     x: 0,
-      //     y: width++,
-      //     animated: true,
-      //   });
-      //   if (width > totalHeight) {
-      //     clearTimeout(t);
-      //   }
-      //   t = setTimeout(timedCount, 10);
-      // }
-      // timedCount();
-    } else {
-      // move();
-      // setIsScrolling(!isScrolling);
-    }
-    newDuration.value = (scriptText.length / 15) * 1000;
-    newScroll.value = 0;
-    if (newScroll.value !== -totalHeight) newScroll.value = -totalHeight;
-    console.log('newScroll.value', newScroll.value);
-    console.log('newDuration', newDuration.value);
+    setIsButtonPressed(!isButtonPressed);
+    setIsScrolling(!isScrolling);
   };
 
   const onLayout = event => {
     const { height } = event.nativeEvent.layout;
-    setTotalHeight(height);
+    const floorHeight = height ? Math.floor(height) - 304 : 0;
+    setTotalHeight(floorHeight);
   };
 
   return (
@@ -223,31 +138,11 @@ export function CameraRecord({ route }) {
           flexDirection: 'column',
         }}
       >
-        {/* <ScrollView
-          ref={aref}
-          onLayout={event => {
-            event.nativeEvent.layout.height;
-            console.log('layoutHeight', event.nativeEvent.layout.height);
-            console.log(scrollViewRef.current.contentOffset);
-            if (ScrollViewManager && ScrollViewManager.getContentSize) {
-              ScrollViewManager.getContentSize(
-                ReactNative.findNodeHandle(scrollViewRef.current),
-                contentSize => {
-                  console.log('contentSize', contentSize.height);
-                  setTotalHeight(contentSize.height);
-                },
-              );
-            }
-          }}
+        <ScrollView
+          ref={scrollViewRef}
           onScroll={handleScroll}
-          onScrollBeginDrag={() => {
-            setIsDragging(true);
-            console.log('isDragging onScrollBeginDrag', isDragging);
-          }}
-          onScrollEndDrag={() => {
-            setIsDragging(false);
-            console.log('isDragging onScrollEndDrag', isDragging);
-          }}
+          onScrollBeginDrag={() => setIsScrolling(false)}
+          onScrollEndDrag={() => isButtonPressed && setIsScrolling(true)}
           style={{
             marginHorizontal: 20,
             marginTop: getStatusBarHeight(),
@@ -260,24 +155,14 @@ export function CameraRecord({ route }) {
           contentInsetAdjustmentBehavior="automatic"
         >
           <TeleprompterText
+            onLayout={onLayout}
             style={{
               elevation: Platform.OS === 'android' ? 9999 : 0,
             }}
           >
             {scriptText}
           </TeleprompterText>
-        </ScrollView> */}
-        <PanGestureHandler onGestureEvent={eventHandler}>
-          <Animated.View style={[style]} onLayout={onLayout}>
-            <TeleprompterText
-              style={{
-                elevation: Platform.OS === 'android' ? 999 : 0,
-              }}
-            >
-              {scriptText}
-            </TeleprompterText>
-          </Animated.View>
-        </PanGestureHandler>
+        </ScrollView>
       </Container>
       <Camera
         style={{ flex: 1, position: 'relative', aspectRatio: 0.5625 }}
@@ -292,8 +177,8 @@ export function CameraRecord({ route }) {
           position: 'absolute',
           width: '80%',
           left: '10%',
-          bottom: getBottomSpace(),
-          height: Platform.OS === 'ios' ? getBottomSpace() + 80 : 80,
+          bottom: Platform.OS === 'ios' ? getBottomSpace() : 40,
+          height: Platform.OS === 'ios' ? getBottomSpace() + 80 : 120,
           justifyContent: 'center',
           backgroundColor: 'rgba(31, 31, 31, 0.879)',
           borderRadius: 10,
@@ -308,113 +193,97 @@ export function CameraRecord({ route }) {
             justifyContent: 'center',
           }}
         >
-          <View
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'space-evenly',
-            }}
-          >
-            <TouchableOpacity
-              style={{ alignSelf: 'center' }}
-              onPress={() => {
-                setType(
-                  type === Camera.Constants.Type.back
-                    ? Camera.Constants.Type.front
-                    : Camera.Constants.Type.back,
-                );
-              }}
-            >
-              <Ionicons
-                name={
-                  Platform.OS === 'ios'
-                    ? 'ios-camera-reverse'
-                    : 'md-camera-reverse'
-                }
-                size={40}
-                color="white"
+          <ActionsContainer>
+            <SliderContainer>
+            <MaterialCommunityIcons name="speedometer-slow" size={24} color="white" />
+              <Slider
+                style={{ width: '80%', height: 40, }}
+                minimumValue={1}
+                maximumValue={3}
+                value={scrollSpeed.value}
+                thumbTintColor={theme.colors.secondary_light}
+                minimumTrackTintColor="#FFFFFF"
+                maximumTrackTintColor="#000000"
+                onValueChange={(event) => {
+                  cancelAnimation(scrollSpeed);
+                  scrollSpeed.value = event;
+                }}
               />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ alignSelf: 'center' }}
-              onPress={() => {
-                newDuration.value -= 200;
-                if (newDuration.value < 0) newDuration.value = 0;
-                console.log('newDuration', newDuration.value);
-              }}
-            >
-              <Ionicons name="alert" size={40} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                alignSelf: 'center',
-                backgroundColor: isScrolling ? '#00ff00' : '#ff0000',
-              }}
-              onPress={handleButtonPress}
-            >
-              <View
-                style={{
-                  borderWidth: 2,
-                  borderRadius: 25,
-                  borderColor: 'white',
-                  height: 50,
-                  width: 50,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+              <MaterialCommunityIcons name="speedometer" size={24} color="white" />
+            </SliderContainer>
+            <ButtonsContainer>
+              <TouchableOpacity
+                style={{ alignSelf: 'center' }}
+                onPress={() => {
+                  setType(
+                    type === Camera.Constants.Type.back
+                      ? Camera.Constants.Type.front
+                      : Camera.Constants.Type.back,
+                  );
                 }}
               >
-                <View
-                  style={{
-                    borderWidth: 2,
-                    borderRadius: 25,
-                    borderColor: 'white',
-                    height: 40,
-                    width: 40,
-                    backgroundColor: 'white',
-                  }}
+                <Ionicons
+                  name={
+                    Platform.OS === 'ios'
+                      ? 'ios-camera-reverse'
+                      : 'md-camera-reverse'
+                  }
+                  size={40}
+                  color="white"
                 />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ alignSelf: 'center' }}
-              onPress={async () => {
-                if (!recording && !!cameraRef) {
-                  setRecording(true);
-                  const video = await cameraRef.recordAsync();
-                  await Sharing.shareAsync(video.uri);
-                  console.log('video', video);
-                } else {
-                  setRecording(false);
-                  if (cameraRef) cameraRef.stopRecording();
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  alignSelf: 'center',
+                }}
+                onPress={handleButtonPress}
+              >
+                {isScrolling ?
+                  <Ionicons name="pause" size={40} color="white" />
+                  :
+                  <Ionicons name="play" size={40} color="white" />
                 }
-              }}
-            >
-              <View
-                style={{
-                  borderWidth: 2,
-                  borderRadius: 25,
-                  borderColor: 'red',
-                  height: 50,
-                  width: 50,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ alignSelf: 'center' }}
+                onPress={async () => {
+                  if (!recording && !!cameraRef) {
+                    setRecording(true);
+                    const video = await cameraRef.recordAsync();
+                    await Sharing.shareAsync(video.uri);
+                    console.log('video', video);
+                  } else {
+                    setRecording(false);
+                    if (cameraRef) cameraRef.stopRecording();
+                  }
                 }}
               >
                 <View
                   style={{
                     borderWidth: 2,
                     borderRadius: 25,
-                    borderColor: 'red',
+                    borderColor: theme.colors.secondary_light,
                     height: 40,
                     width: 40,
-                    backgroundColor: recording ? 'blue' : 'red',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}
-                />
-              </View>
-            </TouchableOpacity>
-          </View>
+                >
+                  <View
+                    style={{
+                      borderWidth: 2,
+                      borderRadius: 25,
+                      borderColor: recording ? 'red' : 'white',
+                      height: 30,
+                      width: 30,
+                      backgroundColor: recording ? 'red' : 'white',
+                    }}
+                  />
+                </View>
+              </TouchableOpacity>
+            </ButtonsContainer>
+          </ActionsContainer>
         </View>
       </View>
     </View>
