@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
+import { TouchableWithoutFeedback, Keyboard, Alert, KeyboardAvoidingView, Platform, View } from 'react-native';
 import * as Yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import uuid from 'react-native-uuid';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
- Container, Header, Title, Form, Fields, Icon 
+  Container, Header, Title, Form, Fields, Icon
 } from './styles';
 import { InputForm } from '../../components/Form/InputForm';
 import { Button } from '../../components/Form/Button';
@@ -99,46 +99,56 @@ export function Register({ route, navigation }) {
   }, [dataKey, scriptId]);
 
   return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
       <Container>
-        <Header>
-          <Icon
-            name="arrow-left"
-            size={24}
-            color="#fff"
-            onPress={handleGoBack}
-          />
-          <Title>{scriptId ? 'Edit Script' : 'Create Script'}</Title>
-        </Header>
+        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+          <>
+            <Header>
+              <Icon
+                name="arrow-left"
+                size={24}
+                color="#fff"
+                onPress={handleGoBack}
+              />
+              <Title>{scriptId ? 'Edit Script' : 'Create Script'}</Title>
+            </Header>
+            <Form>
+              <Fields>
+                <InputForm
+                  name="title"
+                  control={control}
+                  placeholder="Title"
+                  autoCapitalize="sentences"
+                  autoCorrect={false}
+                  error={errors.name && errors.name.message}
+                />
 
-        <Form>
-          <Fields>
-            <InputForm
-              name="title"
-              control={control}
-              placeholder="Title"
-              autoCapitalize="sentences"
-              autoCorrect={false}
-              error={errors.name && errors.name.message}
-            />
+                <InputForm
+                  name="text"
+                  control={control}
+                  placeholder="Hi this is a new script..."
+                  multiline
+                  numberOfLines={15}
+                  style={{ height: 400 }}
+                  error={errors.amount && errors.amount.message}
+                />
+              </Fields>
+              <View style={{ flex: 1 }} />
 
-            <InputForm
-              name="text"
-              control={control}
-              placeholder="Hi this is a new script..."
-              multiline
-              style={{ height: 400 }}
-              error={errors.amount && errors.amount.message}
-            />
-          </Fields>
-          <Button
-            enabled={!loading}
-            title="Save"
-            onPress={handleSubmit(handleRegister)}
-            style={{ marginTop: 16 }}
-          />
-        </Form>
+            </Form>
+            <View style={{ marginHorizontal: 20, marginBottom: 8 }}>
+              <Button
+                enabled={!loading}
+                title="Save"
+                onPress={handleSubmit(handleRegister)}
+                style={{ marginTop: 16 }}
+              />
+            </View>
+          </>
+        </TouchableWithoutFeedback>
       </Container>
-    </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }

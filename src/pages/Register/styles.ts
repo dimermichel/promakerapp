@@ -2,9 +2,10 @@ import styled from 'styled-components/native';
 import { RFValue } from 'react-native-responsive-fontsize';
 import { Feather } from '@expo/vector-icons';
 
-export const Container = styled.View`
+export const Container = styled.SafeAreaView`
   flex: 1;
   background-color: ${({ theme }) => theme.colors.background};
+  justifyContent: flex-end;
 `;
 
 export const Header = styled.View`
@@ -30,11 +31,10 @@ export const Title = styled.Text`
   color: ${({ theme }) => theme.colors.shape};
 `;
 
-export const Form = styled.View`
+export const Form = styled.ScrollView`
   flex: 1;
   width: 100%;
   padding: 24px;
-  justify-content: space-between;
 `;
 
 export const Fields = styled.View``;
