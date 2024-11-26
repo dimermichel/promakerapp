@@ -51,10 +51,11 @@ Before you begin, ensure you have the following installed on your machine:
 2. **Yarn** or **npm**:  
    Install either Yarn or npm as your package manager.
 
-3. **Expo CLI** (if applicable):  
+3. **Expo CLI**:  
    Install it globally by running:  
    ```bash
    npm install -g expo-cli
+   
 4. **Android Studio**:
 Required for running the app on Android emulators or physical devices. Follow the installation guide for your operating system:
 Android Studio Download.
